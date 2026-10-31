@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#343e2e">
+  <meta name="description" content="A personal November journal for faith, focused work, and the next chapter.">
+  <title>Get ready for engagement in one month — November</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="quotes.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#app">Skip to your journal</a>
+  <div class="journal-shell">
+    <header class="masthead">
+      <a class="wordmark" href="./" aria-label="November journal home"><span class="brand-mark" aria-hidden="true">n.</span> THE NOVEMBER JOURNAL</a>
+      <div class="header-tools"><button id="export-data" class="text-button" type="button">Back up <span aria-hidden="true">↗</span></button><button id="import-data" class="text-button" type="button">Restore</button><input id="import-file" type="file" accept="application/json,.json" hidden></div>
+    </header>
+    <section class="intro" aria-labelledby="page-title">
+      <div class="intro-copy"><p class="eyebrow">01 — 30 NOVEMBER 2026 <span class="tiny-star" aria-hidden="true">✳</span> A MONTH OF INTENTION</p><h1 id="page-title">Get ready for engagement<br><em>in one month.</em></h1><p class="intro-note">A little more grounded. A little more prepared.<br>Make room for what matters, one day at a time.</p></div>
+      <div class="month-stamp" aria-hidden="true"><span>THE NEXT CHAPTER</span><strong>11</strong><span>NOVEMBER / 2026</span><div class="stamp-rule"></div><i>Begin with intention.</i></div>
+    </section>
+    <nav class="main-nav" aria-label="Journal views"><div><button type="button" data-view="today" aria-pressed="true">The daily page</button><button type="button" data-view="month" aria-pressed="false">Month at a glance</button><button type="button" data-view="goals" aria-pressed="false">My intentions</button></div><span id="date-label">Sunday, 1 November</span></nav>
+    <main id="app" tabindex="-1"><p class="loading">Opening your journal…</p></main>
+    <footer class="site-footer"><span>THE NOVEMBER JOURNAL <span aria-hidden="true">/</span> 2026</span><p>Your progress stays in this browser. Back it up to keep a copy.</p><span>Small steps, sincerely taken.</span></footer>
+  </div>
+</body>
+</html>

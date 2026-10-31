@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: november-journal
+    runtime: static
+    buildCommand: echo "Static journal ready"
+    staticPublishPath: dist
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
