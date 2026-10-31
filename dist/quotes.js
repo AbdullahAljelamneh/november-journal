@@ -25,7 +25,7 @@ window.DAILY_QUOTES = [
   { kind: "Reflection", text: "Your responsibility is to show up sincerely, not to guarantee every outcome.", source: "A daily reflection", url: "", theme: "responsibility" },
   { kind: "Quran", text: "Be mindful of Allah, so you may be successful.", source: "Quran 3:200 (Clear Quran)", url: "https://quran.com/en/3/200", theme: "steadfastness" },
   { kind: "Reflection", text: "Begin again gently; consistency is built through returning, not through perfection.", source: "A daily reflection", url: "", theme: "steadfastness" },
-  { kind: "Hadith", text: "No fatigue, nor disease, nor sorrow, nor sadness, nor hurt, nor distress befalls a Muslim…", source: "Sahih al-Bukhari 5641", url: "https://sunnah.com/bukhari:5641", theme: "patience" },
+  { kind: "Hadith", text: "…he who treads the path in search of knowledge, Allah would make that path easy, leading to Paradise for him…", source: "Sahih Muslim 2699a (excerpt)", url: "https://sunnah.com/muslim:2699a", theme: "knowledge" },
   { kind: "Quran", text: "Seek help through patience and prayer.", source: "Quran 2:45 (Sahih International)", url: "https://quran.com/en/2/45", theme: "patience" },
   { kind: "Reflection", text: "Ask for help when you need it; receiving support is part of responsible effort.", source: "A daily reflection", url: "", theme: "responsibility" },
   { kind: "Reflection", text: "Let gratitude notice what is good, and let hope make room for what is still possible.", source: "A daily reflection", url: "", theme: "gratitude" }
