@@ -152,9 +152,9 @@
   function makeQuote(day) {
     const quotes = Array.isArray(window.DAILY_QUOTES) ? window.DAILY_QUOTES : [];
     const q = quotes[(day - 1) % Math.max(quotes.length, 1)];
-    const card = node('aside', { class: `quote-card${q?.theme ? ` theme-${String(q.theme).replace(/[^a-z0-9_-]/gi, '')}` : ''}` });
-    card.append(node('span', { class: 'quote-kicker' }, q?.kind || 'A thought for today'));
-    card.append(node('blockquote', { class: 'quote-text' }, q?.text || 'Begin where you are, and give this day your honest attention.'));
+    const card = node('aside', { lang: 'ar', dir: 'rtl', class: `quote-card${q?.theme ? ` theme-${String(q.theme).replace(/[^a-z0-9_-]/gi, '')}` : ''}` });
+    card.append(node('span', { class: 'quote-kicker' }, ({ Quran: 'آية اليوم', Hadith: 'حديث اليوم', Reflection: 'تأمل اليوم' })[q?.kind] || 'تأمل اليوم'));
+    card.append(node('blockquote', { class: 'quote-text' }, q?.text || 'ابدأ بما تستطيع اليوم، وأحسن ما تعمل.'));
     if (q?.source) {
       const source = node('p', { class: 'quote-source' });
       let safeUrl = '';

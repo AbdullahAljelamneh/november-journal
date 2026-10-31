@@ -39,7 +39,7 @@ Static hosting is free within Render's workspace usage allowances; see https://r
 
 ## Daily words
 
-`dist/quotes.js` includes thirty entries: ten short Quran translation excerpts, five hadith excerpts, and fifteen original reflections clearly identified as reflections. References link to Quran.com and Sunnah.com. English Quran text is a translation of meaning, not the Arabic original.
+`dist/quotes.js` includes thirty Arabic entries: ten short Quran excerpts, five hadith excerpts, and fifteen original reflections clearly identified as reflections. The card uses right-to-left layout and Arabic source labels; references link to Quran.com and Sunnah.com. Quran and hadith text uses the original Arabic. The rest of the journal is in English.
 
 ## Files
 
