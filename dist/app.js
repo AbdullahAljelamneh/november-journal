@@ -52,6 +52,9 @@
   });
   let state = freshState();
   let view = 'today';
+  let selectedGoal = 'quran';
+  const disclosureOpen = new Set();
+  let dateRailScrollLeft = null;
   let saveTimer = 0;
   let preservedInvalidRaw = null;
 
@@ -130,7 +133,11 @@
   function dateString(day) { return `November ${day}, 2026`; }
   function makeDateStrip() {
     const strip = node('div', { class: 'date-strip', role: 'group', 'aria-label': 'Choose a November date' });
-    strip.append(node('div', { class: 'date-strip-heading' }, [node('span', { class: 'eyebrow' }, 'NOVEMBER 2026'), node('span', { class: 'date-strip-hint' }, 'Choose a day') ]));
+    const heading = node('div', { class: 'date-strip-heading' }, [node('span', { class: 'eyebrow' }, 'NOVEMBER 2026'), node('span', { class: 'date-strip-hint' }, 'Choose a day')]);
+    const jumpLabel = node('label', { class: 'date-jump' }, [node('span', {}, 'Jump to date')]);
+    const jump = node('select', { class: 'date-jump-select', 'data-date-jump': '', 'aria-label': 'Jump to date' });
+    for (let d = 1; d <= DAYS; d++) jump.append(node('option', { value: d, ...(d === state.selectedDay ? { selected: true } : {}) }, `Nov ${d}`));
+    jumpLabel.append(jump); heading.append(jumpLabel); strip.append(heading);
     const rail = node('div', { class: 'date-rail' });
     for (let d = 1; d <= DAYS; d++) {
       const b = node('button', { type: 'button', class: 'day-button', 'data-day': d, 'aria-pressed': d === state.selectedDay ? 'true' : 'false', 'aria-label': `${dateString(d)}${completedOn(d) ? `, ${completedOn(d)} of 6 habits complete` : ''}` }, [node('span', { class: 'day-name' }, ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(2026, 10, d).getDay()]), node('span', { class: 'day-number' }, String(d)), node('span', { class: 'day-mark', 'aria-hidden': 'true' }, completedOn(d) ? '●' : '·')]);
@@ -139,11 +146,17 @@
     strip.append(rail);
     return strip;
   }
-  function makeHeader() {
+  function makeHeader(currentView) {
     const done = completedOn(state.selectedDay);
-    const header = node('header', { class: 'page-heading summary-bar' });
+    const heading = currentView === 'goals' ? 'Monthly goals' : currentView === 'month' ? 'Month at a glance' : 'Daily planner';
+    const description = currentView === 'goals' ? 'Track three outcomes for November. Choose a goal to update it.' : currentView === 'month' ? 'See which habits you completed each day this month.' : 'Tick each habit when you finish it.';
+    const header = node('header', { class: `page-heading summary-bar${currentView === 'goals' ? ' goals-page-heading' : ''}` });
+    const copy = node('div', { class: 'page-heading-copy' }, [node('h2', { class: 'page-title' }, heading), node('p', { class: 'page-subtitle' }, description)]);
+    if (currentView === 'goals') copy.append(node('p', { class: 'page-period' }, 'November 2026'));
+    header.append(copy);
+    if (currentView === 'goals') return header;
     const stats = node('div', { class: 'summary-stats', 'aria-label': 'Progress summary' });
-    stats.append(node('div', { class: 'summary-stat' }, [node('span', { class: 'stat-value' }, `${done}/6`), node('span', { class: 'stat-label' }, 'today') ]));
+    stats.append(node('div', { class: 'summary-stat' }, [node('span', { class: 'stat-value' }, `${done}/6`), node('span', { class: 'stat-label' }, 'selected day') ]));
     stats.append(node('div', { class: 'summary-stat' }, [node('span', { class: 'stat-value' }, `${allCompleted()}`), node('span', { class: 'stat-label' }, 'habits kept') ]));
     stats.append(node('div', { class: 'summary-stat' }, [node('span', { class: 'stat-value' }, `${state.applications.length}/20`), node('span', { class: 'stat-label' }, 'applications') ]));
     header.append(stats);
@@ -189,7 +202,7 @@
   function makeAgenda() {
     const section = node('section', { class: 'panel agenda-panel', 'aria-labelledby': 'agenda-heading' });
     const tasks = current().tasks;
-    section.append(node('div', { class: 'section-heading' }, [node('div', {}, [node('p', { class: 'eyebrow' }, 'MAKE SPACE FOR WHAT MATTERS'), node('h2', { id: 'agenda-heading' }, 'Today’s agenda')]), node('span', { class: 'quiet-count' }, `${countTasksDone(state.selectedDay)}/${tasks.length} done`) ]));
+    section.append(node('div', { class: 'section-heading' }, [node('div', {}, [node('h3', { id: 'agenda-heading' }, 'Daily tasks'), node('p', { class: 'section-date' }, dateString(state.selectedDay))]), node('span', { class: 'quiet-count' }, `${countTasksDone(state.selectedDay)}/${tasks.length} done`) ]));
     const list = node('ul', { class: 'task-list' });
     tasks.forEach(task => {
       const li = node('li', { class: `task-row${task.done ? ' is-complete' : ''}` });
@@ -199,12 +212,13 @@
       li.append(node('button', { type: 'button', class: 'icon-button delete-task', 'data-delete-task': task.id, 'aria-label': `Delete ${task.text || 'task'}` }, '×'));
       list.append(li);
     });
-    if (!tasks.length) list.append(node('li', { class: 'empty-state' }, 'Nothing on the agenda yet. Add one gentle nudge for today.'));
+    if (!tasks.length) list.append(node('li', { class: 'empty-state' }, 'No tasks yet. Add one thing you want to make time for today.'));
     const form = node('form', { class: 'task-form', id: 'task-form' });
-    const text = node('input', { type: 'text', name: 'task', maxlength: '100', placeholder: 'Add a task', 'aria-label': 'Task description', required: true });
+    const text = node('input', { type: 'text', name: 'task', maxlength: '100', 'aria-label': 'Task description', required: true });
     const time = node('input', { type: 'time', name: 'time', 'aria-label': 'Optional task time' });
-    form.append(text, time, node('button', { type: 'submit', class: 'button button-primary' }, 'Add task'));
-    section.append(list, form);
+    form.append(node('label', { class: 'form-field' }, [node('span', {}, 'Task'), text]), node('label', { class: 'form-field' }, [node('span', {}, 'Time (optional)'), time]), node('button', { type: 'submit', class: 'button button-primary' }, 'Add task'));
+    const quickAction = node('div', { class: 'daily-quick-actions' }, node('button', { type: 'button', class: 'quick-action', 'data-open-goal': 'jobs' }, 'Log a job application'));
+    section.append(list, form, quickAction);
     return section;
   }
   function makeNotes() {
@@ -247,84 +261,123 @@
   }
   function renderGoals() {
     const wrap = node('div', { class: 'goals-layout' });
-    const chapterCard = node('section', { class: 'panel goal-card chapters-card' });
-    chapterCard.append(node('div', { class: 'section-heading' }, [node('div', {}, [node('p', { class: 'eyebrow' }, 'QURAN MEMORIZATION'), node('h2', {}, 'Ten chapters, one step at a time'), node('p', { class: 'section-description' }, 'Name your chapters and keep an honest sense of where each one is.')]) ]));
-    const chapterList = node('div', { class: 'chapter-list' });
-    state.chapters.forEach((c, i) => {
-      const row = node('div', { class: 'chapter-row' });
-      row.append(node('span', { class: 'chapter-number' }, String(i + 1).padStart(2, '0')));
-      row.append(node('input', { class: 'chapter-name', type: 'text', maxlength: '60', value: c.name, 'data-chapter-name': i, 'aria-label': `Chapter ${i + 1} name` }));
-      const sel = node('select', { class: 'chapter-status', 'data-chapter-status': i, 'aria-label': `Chapter ${i + 1} status` });
-      ['New', 'Reviewing', 'Confident'].forEach(status => sel.append(node('option', { value: status, ...(status === c.status ? { selected: true } : {}) }, status)));
-      row.append(sel); chapterList.append(row);
-    });
-    chapterCard.append(chapterList);
-    const right = node('div', { class: 'goals-side' });
-    const salseyCard = node('section', { class: 'panel goal-card salsey-card' });
-    salseyCard.append(node('div', { class: 'section-heading' }, [node('div', {}, [node('p', { class: 'eyebrow' }, 'SALSEY VALIDATION'), node('h2', {}, 'Four useful answers'), node('p', { class: 'section-description' }, 'Record evidence as you learn. The goal is clarity, not perfection.')]) ]));
-    const milestoneList = node('div', { class: 'milestone-list' });
-    MILESTONES.forEach(m => {
-      const data = state.milestones.find(x => x.id === m.id);
-      const row = node('div', { class: `milestone-row${data.done ? ' is-complete' : ''}` });
-      row.append(node('span', { class: 'milestone-range' }, m.range));
-      row.append(node('label', { class: 'milestone-label' }, [node('input', { type: 'checkbox', 'data-milestone-done': m.id, ...(data.done ? { checked: true } : {}) }), node('span', {}, m.title)]));
-      row.append(node('p', { class: 'milestone-detail' }, m.detail));
-      row.append(node('textarea', { rows: '2', maxlength: '1200', placeholder: 'Evidence, notes, or next step…', 'data-milestone-evidence': m.id, 'aria-label': `${m.title} evidence` }, data.evidence));
-      milestoneList.append(row);
-    });
-    const decision = node('label', { class: 'decision-field' }, [node('span', {}, 'December decision · Dec 21–24'), node('small', { class: 'decision-options' }, 'Choose: Keep testing · Adjust pilot · Pause. Provisional signals: 80% weekly active; 3 calls per active rep; 80% of reports rated fair by the manager; 98% report reliability; 70% want to continue.'), node('textarea', { rows: '4', maxlength: '1200', 'data-decision': '', placeholder: 'Record your decision and the evidence behind it…', 'aria-label': 'December decision and evidence' }, state.decision)]);
-    salseyCard.append(node('p', { class: 'section-description' }, 'This November tracker ends at launch and early feedback. The pilot runs through Dec 18; make the final call Dec 21–24.'), milestoneList, decision);
-    const apps = node('section', { class: 'panel goal-card applications-card' });
+    const confidentCount = state.chapters.filter(c => c.status === 'Confident').length;
     const buckets = [0, 1, 2, 3].map(i => ({ start: i * 7 + 1, end: i === 3 ? 30 : i * 7 + 7 }));
     const byWeek = buckets.map((b, i) => state.applications.filter(a => { const d = parseInt(a.date.slice(8, 10), 10); return a.date.startsWith('2026-11-') && d >= b.start && d <= b.end; }).length);
-    apps.append(node('div', { class: 'section-heading' }, [node('div', {}, [node('p', { class: 'eyebrow' }, 'STEADY OUTREACH'), node('h2', {}, 'Twenty applications'), node('p', { class: 'section-description' }, `${state.applications.length} recorded · aim for 5 each week`)]) ]));
-    const weekStats = node('div', { class: 'week-buckets' });
-    buckets.forEach((b, i) => weekStats.append(node('div', { class: 'week-bucket' }, [node('span', { class: 'week-label' }, `Week ${i + 1}`), node('span', { class: 'week-range' }, `${b.start}–${b.end}`), node('strong', { class: 'week-count' }, `${byWeek[i]}/5`)])));
-    const form = node('form', { class: 'application-form', id: 'application-form' });
-    form.append(node('input', { type: 'date', name: 'date', min: '2026-11-01', max: '2026-11-30', 'aria-label': 'Application date', required: true }), node('input', { type: 'text', name: 'company', maxlength: '100', placeholder: 'Company', 'aria-label': 'Company', required: true }), node('input', { type: 'text', name: 'role', maxlength: '100', placeholder: 'Role', 'aria-label': 'Role', required: true }), node('button', { type: 'submit', class: 'button button-primary' }, 'Add'));
-    const appList = node('ul', { class: 'applications-list' });
-    state.applications.slice().sort((a, b) => b.date.localeCompare(a.date)).forEach(a => {
-      const li = node('li', { class: 'application-row' });
-      li.append(node('time', { datetime: a.date }, a.date.slice(5).replace('-', '/')), node('span', { class: 'application-company' }, a.company), node('span', { class: 'application-role' }, a.role), node('button', { type: 'button', class: 'icon-button', 'data-delete-application': a.id, 'aria-label': `Remove application for ${a.company}` }, '×'));
-      appList.append(li);
-    });
-    if (!state.applications.length) appList.append(node('li', { class: 'empty-state' }, 'Your list will grow one thoughtful application at a time.'));
-    apps.append(weekStats, form, appList);
-    right.append(salseyCard, apps); wrap.append(chapterCard, right);
+    const quranCard = goalSelectorCard('quran', 'Quran memorization', `${confidentCount}/10`, 'chapters confident', 'Update chapters');
+    const jobsCard = goalSelectorCard('jobs', 'Job applications', `${state.applications.length}/20`, 'applications logged', 'Log an application');
+    const salseyCard = goalSelectorCard('salsey', 'Salsey pilot', `${state.milestones.filter(m => m.done).length}/4`, 'weekly steps complete', 'View pilot plan');
+    const selector = node('div', { class: 'goal-selector', role: 'group', 'aria-label': 'Choose a monthly goal' }, [quranCard, jobsCard, salseyCard]);
+    wrap.append(selector);
+
+    if (selectedGoal === 'quran') {
+      const panel = node('section', { class: 'panel goal-detail quran-goal', 'data-goal-panel': 'quran', 'aria-labelledby': 'quran-goal-heading' });
+      panel.append(node('h3', { id: 'quran-goal-heading' }, 'Quran memorization'), node('p', { class: 'goal-instructions' }, 'Update a chapter name and choose how it feels today.'));
+      const table = node('table', { class: 'chapter-table' });
+      const head = node('thead'); const headRow = node('tr', { class: 'chapter-column-headings' });
+      headRow.append(node('th', { scope: 'col' }, 'No.'), node('th', { scope: 'col' }, 'Chapter'), node('th', { scope: 'col' }, 'Confidence'));
+      head.append(headRow); table.append(head);
+      const body = node('tbody');
+      state.chapters.forEach((c, i) => {
+        const row = node('tr');
+        row.append(node('td', { class: 'chapter-number' }, String(i + 1).padStart(2, '0')));
+        row.append(node('td', {}, node('input', { class: 'chapter-name', type: 'text', maxlength: '60', value: c.name, 'data-chapter-name': i, 'aria-label': `Chapter ${i + 1} name` })));
+        const status = node('select', { class: 'chapter-status', 'data-chapter-status': i, 'aria-label': `Confidence for ${c.name || `chapter ${i + 1}`}` });
+        [['New', 'Not reviewed'], ['Reviewing', 'Needs practice'], ['Confident', 'Confident']].forEach(([value, label]) => status.append(node('option', { value, ...(value === c.status ? { selected: true } : {}) }, label)));
+        row.append(node('td', {}, status)); body.append(row);
+      });
+      table.append(body); panel.append(table); wrap.append(panel);
+    } else if (selectedGoal === 'jobs') {
+      const panel = node('section', { class: 'panel goal-detail jobs-goal', 'data-goal-panel': 'jobs', 'aria-labelledby': 'jobs-goal-heading' });
+      panel.append(node('h3', { id: 'jobs-goal-heading' }, 'Job applications'), node('p', { class: 'goal-instructions' }, 'Aim for five applications in each week of November.'));
+      const weekStats = node('div', { class: 'week-buckets' });
+      buckets.forEach((b, i) => weekStats.append(node('div', { class: 'week-bucket' }, [node('span', { class: 'week-label' }, `Week ${i + 1}`), node('span', { class: 'week-range' }, `Nov ${b.start}–${b.end}`), node('strong', { class: 'week-count' }, `${byWeek[i]}/5`)])));
+      const form = node('form', { class: 'application-form', id: 'application-form' });
+      const dateInput = node('input', { type: 'date', name: 'date', min: '2026-11-01', max: '2026-11-30', value: `2026-11-${String(state.selectedDay).padStart(2, '0')}`, required: true });
+      const companyInput = node('input', { type: 'text', name: 'company', maxlength: '100', required: true });
+      const roleInput = node('input', { type: 'text', name: 'role', maxlength: '100', required: true });
+      form.append(node('label', { class: 'form-field' }, [node('span', {}, 'Date'), dateInput]), node('label', { class: 'form-field' }, [node('span', {}, 'Company'), companyInput]), node('label', { class: 'form-field' }, [node('span', {}, 'Role'), roleInput]), node('button', { type: 'submit', class: 'button button-primary' }, 'Save application'));
+      const appList = node('ul', { class: 'applications-list' });
+      state.applications.slice().sort((a, b) => b.date.localeCompare(a.date)).forEach(a => {
+        const li = node('li', { class: 'application-row' });
+        li.append(node('time', { datetime: a.date }, a.date.slice(5).replace('-', '/')), node('span', { class: 'application-company' }, a.company), node('span', { class: 'application-role' }, a.role), node('button', { type: 'button', class: 'icon-button', 'data-delete-application': a.id, 'aria-label': `Remove application for ${a.company}` }, '×'));
+        appList.append(li);
+      });
+      if (!state.applications.length) appList.append(node('li', { class: 'empty-state' }, 'No applications logged yet. Add the first one above.'));
+      panel.append(weekStats, form, appList); wrap.append(panel);
+    } else {
+      const panel = node('section', { class: 'panel goal-detail salsey-goal', 'data-goal-panel': 'salsey', 'aria-labelledby': 'salsey-goal-heading' });
+      panel.append(node('h3', { id: 'salsey-goal-heading' }, 'Salsey pilot'), node('p', { class: 'goal-instructions' }, 'Four weekly checkpoints. The pilot runs through Dec 18; make the final decision Dec 21–24.'));
+      const checklist = node('div', { class: 'milestone-checklist' });
+      MILESTONES.forEach(m => {
+        const data = state.milestones.find(x => x.id === m.id);
+        const row = node('div', { class: `milestone-checkpoint${data.done ? ' is-complete' : ''}` });
+        const label = node('label', { class: 'milestone-label' }, [node('input', { type: 'checkbox', 'data-milestone-done': m.id, ...(data.done ? { checked: true } : {}) }), node('span', { class: 'milestone-range' }, m.range), node('span', { class: 'milestone-title' }, m.title)]);
+        row.append(label, node('p', { class: 'milestone-detail' }, m.detail));
+        const notes = node('details', { class: 'checkpoint-notes', 'data-disclosure': `milestone-${m.id}`, ...(disclosureOpen.has(`milestone-${m.id}`) ? { open: true } : {}) });
+        notes.append(node('summary', {}, 'Add notes (optional)'), node('textarea', { rows: '2', maxlength: '1200', placeholder: 'Notes or evidence', 'data-milestone-evidence': m.id, 'aria-label': `Notes for ${m.title}` }, data.evidence));
+        row.append(notes); checklist.append(row);
+      });
+      const decision = node('details', { class: 'decision-disclosure', 'data-disclosure': 'decision', ...(disclosureOpen.has('decision') ? { open: true } : {}) });
+      decision.append(node('summary', {}, 'December decision and criteria · Dec 21–24'), node('p', { class: 'decision-options' }, 'Choose: Keep testing · Adjust pilot · Pause. Provisional signals: 80% weekly active; 3 calls per active rep; 80% of reports rated fair by the manager; 98% report reliability; 70% want to continue.'), node('label', { class: 'form-field' }, [node('span', {}, 'Decision and evidence'), node('textarea', { rows: '4', maxlength: '1200', 'data-decision': '', placeholder: 'Record your decision and evidence', 'aria-label': 'December decision and evidence' }, state.decision)]));
+      panel.append(checklist, decision); wrap.append(panel);
+    }
     return wrap;
+  }
+
+  function goalSelectorCard(id, title, progress, caption, action) {
+    const button = node('button', { type: 'button', class: `goal-selector-card${selectedGoal === id ? ' is-active' : ''}`, 'data-goal': id, 'aria-pressed': selectedGoal === id ? 'true' : 'false' });
+    button.append(node('strong', { class: 'goal-card-name' }, title), node('span', { class: 'goal-progress' }, progress), node('span', { class: 'goal-progress-label' }, caption), node('span', { class: 'goal-action' }, action));
+    return button;
   }
 
   function render() {
     const previousRail = content.querySelector('.date-rail');
-    const previousScrollLeft = previousRail ? previousRail.scrollLeft : null;
+    if (previousRail) dateRailScrollLeft = previousRail.scrollLeft;
+    content.querySelectorAll('details[data-disclosure]').forEach(disclosure => {
+      if (disclosure.open) disclosureOpen.add(disclosure.dataset.disclosure);
+      else disclosureOpen.delete(disclosure.dataset.disclosure);
+    });
     const active = document.activeElement;
     let focusDescriptor = null;
     if (active?.matches?.('[data-habit]')) focusDescriptor = { selector: '[data-habit]', key: 'habit', value: active.dataset.habit };
     else if (active?.matches?.('[data-month-day][data-month-habit]')) focusDescriptor = { selector: '[data-month-day][data-month-habit]', key: 'monthDay', extraKey: 'monthHabit', value: active.dataset.monthDay, extraValue: active.dataset.monthHabit };
     else if (active?.matches?.('[data-task-check]')) focusDescriptor = { selector: '[data-task-check]', key: 'taskCheck', value: active.dataset.taskCheck };
     else if (active?.matches?.('[data-day]')) focusDescriptor = { selector: '[data-day]', key: 'day', value: active.dataset.day };
-    const strip = makeDateStrip();
-    if (dateLabel) dateLabel.textContent = dateString(state.selectedDay);
-    content.replaceChildren(strip, makeHeader(), view === 'month' ? renderMonth() : view === 'goals' ? renderGoals() : renderToday());
+    else if (active?.matches?.('[data-goal]')) focusDescriptor = { selector: '[data-goal]', key: 'goal', value: active.dataset.goal };
+    else if (active?.matches?.('[data-chapter-status]')) focusDescriptor = { selector: '[data-chapter-status]', key: 'chapterStatus', value: active.dataset.chapterStatus };
+    else if (active?.matches?.('[data-milestone-done]')) focusDescriptor = { selector: '[data-milestone-done]', key: 'milestoneDone', value: active.dataset.milestoneDone };
+    if (dateLabel) dateLabel.textContent = view === 'goals' ? 'November 2026' : dateString(state.selectedDay);
+    const children = [];
+    if (view !== 'goals') children.push(makeDateStrip());
+    children.push(makeHeader(view), view === 'month' ? renderMonth() : view === 'goals' ? renderGoals() : renderToday());
+    content.replaceChildren(...children);
     app.append(appFooter);
     const rail = content.querySelector('.date-rail');
-    if (previousScrollLeft !== null) rail.scrollLeft = previousScrollLeft;
-    const selectedDate = rail.querySelector('[data-day][aria-pressed="true"]');
-    const railRect = rail.getBoundingClientRect();
-    const dateRect = selectedDate.getBoundingClientRect();
-    if (dateRect.left < railRect.left) rail.scrollLeft -= railRect.left - dateRect.left;
-    else if (dateRect.right > railRect.right) rail.scrollLeft += dateRect.right - railRect.right;
+    if (rail) {
+      if (dateRailScrollLeft !== null) rail.scrollLeft = dateRailScrollLeft;
+      const selectedDate = rail.querySelector('[data-day][aria-pressed="true"]');
+      const railRect = rail.getBoundingClientRect();
+      const dateRect = selectedDate.getBoundingClientRect();
+      if (dateRect.left < railRect.left) rail.scrollLeft -= railRect.left - dateRect.left;
+      else if (dateRect.right > railRect.right) rail.scrollLeft += dateRect.right - railRect.right;
+      dateRailScrollLeft = rail.scrollLeft;
+    }
     if (focusDescriptor) {
       const replacement = Array.from(content.querySelectorAll(focusDescriptor.selector)).find(el => el.dataset[focusDescriptor.key] === focusDescriptor.value && (!focusDescriptor.extraKey || el.dataset[focusDescriptor.extraKey] === focusDescriptor.extraValue));
       replacement?.focus({ preventScroll: true });
     }
-    document.querySelectorAll('[data-view]').forEach(b => { const active = b.getAttribute('data-view') === view; b.setAttribute('aria-current', active ? 'page' : 'false'); b.setAttribute('aria-pressed', active ? 'true' : 'false'); b.classList.toggle('is-active', active); });
+    nav.querySelectorAll('[data-view]').forEach(b => { const active = b.getAttribute('data-view') === view; b.setAttribute('aria-current', active ? 'page' : 'false'); b.setAttribute('aria-pressed', active ? 'true' : 'false'); b.classList.toggle('is-active', active); });
   }
   function setDay(day) { state.selectedDay = Math.max(1, Math.min(DAYS, Number(day) || 1)); saveSoon(); render(); }
   document.addEventListener('click', event => {
     const viewButton = event.target.closest('[data-view]');
     if (viewButton) { const next = viewButton.getAttribute('data-view'); if (['today', 'month', 'goals'].includes(next)) { view = next; render(); } return; }
     if (!app.contains(event.target)) return;
+    const goalButton = event.target.closest('[data-goal]');
+    if (goalButton) { selectedGoal = goalButton.dataset.goal; render(); return; }
+    const openGoal = event.target.closest('[data-open-goal]');
+    if (openGoal) { view = 'goals'; selectedGoal = openGoal.dataset.openGoal; render(); content.querySelector('#application-form input[name="date"]')?.focus({ preventScroll: true }); return; }
     const dayButton = event.target.closest('[data-day]'); if (dayButton) { setDay(dayButton.dataset.day); return; }
     const monthCell = event.target.closest('[data-month-day][data-month-habit]');
     if (monthCell) { const day = Number(monthCell.dataset.monthDay); const id = monthCell.dataset.monthHabit; state.days[day - 1].habits[id] = !state.days[day - 1].habits[id]; state.selectedDay = day; saveSoon(); render(); return; }
@@ -335,10 +388,11 @@
   });
   app.addEventListener('change', event => {
     const target = event.target;
-    if (target.matches('[data-habit]')) { current().habits[target.dataset.habit] = target.checked; saveSoon(); render(); }
+    if (target.matches('[data-date-jump]')) { setDay(target.value); }
+    else if (target.matches('[data-habit]')) { current().habits[target.dataset.habit] = target.checked; saveSoon(); render(); }
     else if (target.matches('[data-quran-chapter]')) { current().quranChapter = target.value; saveSoon(); }
     else if (target.matches('[data-task-check]')) { const t = current().tasks.find(x => x.id === target.dataset.taskCheck); if (t) t.done = target.checked; saveSoon(); render(); }
-    else if (target.matches('[data-chapter-status]')) { state.chapters[Number(target.dataset.chapterStatus)].status = target.value; saveSoon(); }
+    else if (target.matches('[data-chapter-status]')) { state.chapters[Number(target.dataset.chapterStatus)].status = target.value; saveSoon(); render(); }
     else if (target.matches('[data-milestone-done]')) { const m = state.milestones.find(x => x.id === target.dataset.milestoneDone); if (m) m.done = target.checked; saveSoon(); render(); }
   });
   app.addEventListener('input', event => {
@@ -354,6 +408,7 @@
     if (event.target.id === 'task-form') {
       event.preventDefault(); const fd = new FormData(event.target); const text = String(fd.get('task') || '').trim(); if (!text) return;
       current().tasks.push({ id: window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random()}`, text, time: String(fd.get('time') || ''), done: false }); saveSoon(); render();
+      content.querySelector('[name="task"]')?.focus({ preventScroll: true });
     } else if (event.target.id === 'application-form') {
       event.preventDefault(); const fd = new FormData(event.target); const date = String(fd.get('date') || ''), company = String(fd.get('company') || '').trim(), role = String(fd.get('role') || '').trim(); if (!date || !company || !role) return;
       state.applications.push({ id: window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random()}`, date, company, role }); saveSoon(); render();

@@ -4,9 +4,9 @@ A personal habit tracker for November 2026, titled **Get ready for engagement in
 
 ## Use
 
-- **The daily page:** select any November date, check six daily habits, add tasks with optional times, and write a note.
-- **Month at a glance:** see all 180 habit checkboxes and update any day directly.
-- **My intentions:** name the ten Quran chapters, track confidence, record Salsey pilot evidence, and log job applications.
+- **Daily planner:** select any November date using the date strip or shortcut, check six daily habits, add tasks with optional times, and write a note.
+- **Habit calendar:** see all 180 habit checkboxes and update any day directly.
+- **Monthly goals:** choose Quran, Job applications, or Salsey to see its progress and update its details. Only one goal is shown at a time. Optional pilot notes and the December review expand when needed.
 - **Back up / Restore:** export progress as JSON or restore a previously exported file. Restore asks before replacing current entries.
 
 The daily habits are Quran memorization review, Knock the door, ten minutes of English reading, ten minutes of religious reading, ten Quran pages, and one Salsey action. Quran chapters are editable because the exact passages have not yet been specified.
